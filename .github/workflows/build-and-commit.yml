@@ -6,12 +6,12 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write  # Needed to commit and push to the repo
+  contents: write  # Needed to push commits back to the repo
 
 jobs:
   build:
     runs-on: ${{ matrix.os }}
-    continue-on-error: true  # Don't fail other jobs if one OS job fails
+    continue-on-error: true  # Don't fail all jobs if one OS job fails
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
@@ -28,15 +28,15 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3.6.0
+        uses: actions/checkout@v3
 
       - name: Set up Python
-        uses: actions/setup-python@v4.8.0
+        uses: actions/setup-python@v4
         with:
           python-version: '3.10'
 
       - name: Cache pip
-        uses: actions/cache@v3.3.2
+        uses: actions/cache@v3
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
