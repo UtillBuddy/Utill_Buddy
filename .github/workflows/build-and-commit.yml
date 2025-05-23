@@ -69,11 +69,13 @@ jobs:
           ' README.md > README.tmp && mv README.tmp README.md
         shell: bash
 
-      - name: Commit build and updated README
+           - name: Commit build and updated README
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git pull origin main --rebase  # Pull remote changes before pushing to avoid conflicts
+          git stash push -m "auto-stash before pull" || echo "Nothing to stash"
+          git pull origin main --rebase
+          git stash pop || echo "Nothing to stash pop"
           git add portable/${{ matrix.label }}/ README.md
           git commit -m "Add ${{ matrix.label }} build and update README [auto]" || echo "Nothing to commit"
           git push origin main
