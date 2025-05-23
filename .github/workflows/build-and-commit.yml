@@ -47,15 +47,16 @@ jobs:
         shell: bash
 
       - name: Prepare output directory
-        run: |
-          if [[ "$RUNNER_OS" == "Windows" ]]; then
-            mkdir -Force -Path portable\\${{ matrix.label }}
-            cp dist\\UtillBuddy.exe portable\\${{ matrix.label }}\\
-          else
+          run: |
+            if [[ "$RUNNER_OS" == "Windows" ]]; then
+            mkdir -p portable/Windows
+            cp dist/UtillBuddy.exe portable/Windows/
+        else
             mkdir -p portable/${{ matrix.label }}
             cp -f dist/UtillBuddy${{ matrix.ext }} portable/${{ matrix.label }}/
-          fi
-        shell: bash
+    fi
+  shell: bash
+
 
       - name: Update README.md
         run: |
