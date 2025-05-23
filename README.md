@@ -26,11 +26,10 @@
 ## 📥 Downloads
 
 <!-- BUILDS START -->
-<<<<<<< Updated upstream
 🔹 [Download for Linux](portable/Linux/UtillBuddy)
-=======
 🔹 [Download for Windows](portable/Windows/UtillBuddy.exe)
->>>>>>> Stashed changes
+🔹 [Download for Mac]https://github.com/UtillBuddy/Utill_Buddy/blob/main/portable/macOS/UtillBuddy.app
+
 <!-- BUILDS END -->
 
 ---
