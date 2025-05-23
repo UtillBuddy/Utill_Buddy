@@ -24,7 +24,11 @@
 ## 📥 Downloads
 
 <!-- BUILDS START -->
+<<<<<<< Updated upstream
 🔹 [Download for macOS](portable/macOS/UtillBuddy.app)
+=======
+🔹 [Download for Linux](portable/Linux/UtillBuddy)
+>>>>>>> Stashed changes
 <!-- BUILDS END -->
 
 ---
