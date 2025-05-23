@@ -3,11 +3,12 @@ name: Build, Commit, and Update README
 on:
   push:
     branches: [ main ]
-  workflow_dispatch:   # Manual trigger support
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ${{ matrix.os }}
+    continue-on-error: true  # ✅ Continue even if one OS build fails
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
@@ -48,34 +49,54 @@ jobs:
         run: |
           pyinstaller --name "UtillBuddy${{ matrix.ext }}" --onefile utill_buddy.py
 
-      - name: Prepare build directory
+      - name: Upload build artifact
+        if: success()
+        uses: actions/upload-artifact@v3
+        with:
+          name: UtillBuddy-${{ matrix.label }}
+          path: dist/UtillBuddy${{ matrix.ext }}
+
+  finalize:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v3
+
+      - name: Organize builds
         run: |
-          mkdir -p portable/${{ matrix.label }}
-          if [ "${{ matrix.os }}" == "windows-latest" ]; then
-            cp dist/UtillBuddy${{ matrix.ext }} portable/${{ matrix.label }}/
-          else
-            cp dist/UtillBuddy${{ matrix.ext }} portable/${{ matrix.label }}/
-          fi
+          mkdir -p portable/Linux portable/Windows portable/macOS
+          [ -f UtillBuddy-Linux/UtillBuddy ] && mv -f UtillBuddy-Linux/UtillBuddy portable/Linux/
+          [ -f UtillBuddy-Windows/UtillBuddy.exe ] && mv -f UtillBuddy-Windows/UtillBuddy.exe portable/Windows/
+          [ -f UtillBuddy-macOS/UtillBuddy.app ] && mv -f UtillBuddy-macOS/UtillBuddy.app portable/macOS/
 
       - name: Update README.md
         run: |
-          NEW_LINK="🔹 [Download for ${{ matrix.label }}](portable/${{ matrix.label }}/UtillBuddy${{ matrix.ext }})"
           START="<!-- BUILDS START -->"
           END="<!-- BUILDS END -->"
-          awk -v s="$START" -v e="$END" -v l="$NEW_LINK" '
-            $0 ~ s { print; print l; skip=1; next }
-            $0 ~ e { skip=0 }
-            skip == 0 { print }
-          ' README.md > README.tmp && mv README.tmp README.md
-        shell: bash
+          echo "$START" > README.tmp
+          [ -f portable/Linux/UtillBuddy ] && echo "🔹 [Download for Linux](portable/Linux/UtillBuddy)" >> README.tmp
+          [ -f portable/Windows/UtillBuddy.exe ] && echo "🔹 [Download for Windows](portable/Windows/UtillBuddy.exe)" >> README.tmp
+          [ -f portable/macOS/UtillBuddy.app ] && echo "🔹 [Download for macOS](portable/macOS/UtillBuddy.app)" >> README.tmp
+          echo "$END" >> README.tmp
+          awk -v s="$START" -v e="$END" 'BEGIN{skip=0}
+            $0 ~ s {print; while((getline line < "README.tmp") > 0) print line; skip=1; next}
+            $0 ~ e {skip=0; next}
+            skip==0 {print}
+          ' README.md > README.new && mv README.new README.md
 
-      - name: Commit build and updated README
+      - name: Commit and push updates
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add portable/${{ matrix.label }}/ README.md
-          git commit -m "Add ${{ matrix.label }} build and update README [auto]" || echo "Nothing to commit"
-          git pull --rebase --autostash origin main
+          git add -A portable/ README.md   # ✅ Add all changes including overwrites
+          git commit -m "Update builds and README [auto]" || echo "Nothing to commit"
           git push origin main
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
