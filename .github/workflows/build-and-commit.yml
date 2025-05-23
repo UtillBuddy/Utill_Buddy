@@ -1,8 +1,9 @@
-name: Build, Upload Artifacts, and Commit All
+name: Build, Commit, and Update README
 
 on:
   push:
-    branches: [main]
+    branches: [ main ]
+  workflow_dispatch:   # Manual trigger support
 
 jobs:
   build:
@@ -47,57 +48,34 @@ jobs:
         run: |
           pyinstaller --name "UtillBuddy${{ matrix.ext }}" --onefile utill_buddy.py
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: portable-${{ matrix.label }}
-          path: dist/UtillBuddy${{ matrix.ext }}
-
-  commit:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Download artifacts
-        uses: actions/download-artifact@v3
-        with:
-          name: portable-Linux
-          path: portable/Linux
-      - uses: actions/download-artifact@v3
-        with:
-          name: portable-Windows
-          path: portable/Windows
-      - uses: actions/download-artifact@v3
-        with:
-          name: portable-macOS
-          path: portable/macOS
-
-      - name: Update README.md with download links
+      - name: Prepare build directory
         run: |
+          mkdir -p portable/${{ matrix.label }}
+          if [ "${{ matrix.os }}" == "windows-latest" ]; then
+            copy dist\UtillBuddy${{ matrix.ext }} portable\${{ matrix.label }}\
+          else
+            cp dist/UtillBuddy${{ matrix.ext }} portable/${{ matrix.label }}/
+          fi
+
+      - name: Update README.md
+        run: |
+          NEW_LINK="🔹 [Download for ${{ matrix.label }}](portable/${{ matrix.label }}/UtillBuddy${{ matrix.ext }})"
           START="<!-- BUILDS START -->"
           END="<!-- BUILDS END -->"
-          # Prepare download links
-          LINKS="
-          🔹 [Download for Linux](portable/Linux/UtillBuddy)
-          🔹 [Download for Windows](portable/Windows/UtillBuddy.exe)
-          🔹 [Download for macOS](portable/macOS/UtillBuddy.app)
-          "
-          # Replace content between markers
-          awk -v s="$START" -v e="$END" -v l="$LINKS" '
+          awk -v s="$START" -v e="$END" -v l="$NEW_LINK" '
             $0 ~ s { print; print l; skip=1; next }
             $0 ~ e { skip=0 }
             skip == 0 { print }
           ' README.md > README.tmp && mv README.tmp README.md
+        shell: bash
 
-      - name: Commit all builds and updated README
+      - name: Commit build and updated README
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add portable README.md
-          git commit -m "Add all platform builds and update README [auto]" || echo "Nothing to commit"
-          git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git
-          git push
+          git pull origin main --rebase  # Pull remote changes before pushing to avoid conflicts
+          git add portable/${{ matrix.label }}/ README.md
+          git commit -m "Add ${{ matrix.label }} build and update README [auto]" || echo "Nothing to commit"
+          git push origin main
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
