@@ -64,7 +64,7 @@ jobs:
           END="<!-- BUILDS END -->"
           awk -v s="$START" -v e="$END" -v l="$NEW_LINK" '
             $0 ~ s { print; print l; skip=1; next }
-            $0 ~ e { skip=0 }
+            $0 ~ e { skip=0; print; next }
             skip == 0 { print }
           ' README.md > README.tmp && mv README.tmp README.md
         shell: bash
