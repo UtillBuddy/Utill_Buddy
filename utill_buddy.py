@@ -9,7 +9,7 @@ from PyQt5.QtWidgets import (
     QApplication, QFileDialog, QMessageBox, QInputDialog, QShortcut
 )
 from PyQt5.QtGui import QKeySequence, QImage
-from PyQt5.QtCore import QTimer, Qt
+from PyQt5.QtCore import QTimer, Qt, QObject, pyqtSignal
 
 APP_NAME = "Utill Buddy"
 JIGGLE_INTERVAL = 60  # seconds
@@ -23,6 +23,7 @@ default_shortcuts = {
     "cut": "Meta+X" if platform.system() == "Darwin" else "Ctrl+X"
 }
 user_shortcuts = dict(default_shortcuts)
+shortcut_objects = {}
 
 def move_mouse():
     x, y = pyautogui.position()
@@ -42,7 +43,17 @@ def create_icon():
     draw.text((22, 20), "UB", fill=(50, 150, 250))
     return img
 
-# Action functions
+class ActionSignals(QObject):
+    copy = pyqtSignal()
+    paste = pyqtSignal()
+    cut = pyqtSignal()
+    copy_image = pyqtSignal()
+    paste_image = pyqtSignal()
+    custom_shortcut = pyqtSignal(str)
+
+signals = ActionSignals()
+
+# GUI Action functions
 def copy_text():
     text, ok = QInputDialog.getText(None, "Copy Text", "Enter text to copy to clipboard:")
     if ok and text:
@@ -89,18 +100,14 @@ def set_custom_shortcut(action):
         None, "Custom Shortcut", f"Enter shortcut for {action.capitalize()} (e.g., Ctrl+Alt+C):"
     )
     if ok and seq:
+        if action in shortcut_objects:
+            shortcut_objects[action].disconnect()
+        shortcut = QShortcut(QKeySequence(seq), QApplication.instance().activeWindow())
+        shortcut.activated.connect(action_map[action])
+        shortcut_objects[action] = shortcut
         user_shortcuts[action] = seq
-        QShortcut(QKeySequence(seq), QApplication.instance()).activated.connect(action_map[action])
 
-def start_jiggler(icon, item):
-    jiggle_event.set()
-    icon.title = f"{APP_NAME} - Jiggler: On"
-
-def pause_jiggler(icon, item):
-    jiggle_event.clear()
-    icon.title = f"{APP_NAME} - Jiggler: Off"
-
-def quit_app(icon, item):
+def quit_app(icon, _):
     stop_event.set()
     icon.stop()
     QApplication.quit()
@@ -113,27 +120,33 @@ action_map = {
 
 def init_shortcuts(app):
     for action, seq in user_shortcuts.items():
-        shortcut = QShortcut(QKeySequence(seq), app)
+        shortcut = QShortcut(QKeySequence(seq), app.activeWindow())
         shortcut.activated.connect(action_map[action])
+        shortcut_objects[action] = shortcut
 
 def start_tray(app):
+    def trigger(signal):
+        return lambda icon, item: signal.emit()
+
+    def trigger_custom(action):
+        return lambda icon, item: signals.custom_shortcut.emit(action)
+
     icon = Icon(
         APP_NAME,
         icon=create_icon(),
-        title=f"{APP_NAME} - Jiggler: Off",
         menu=Menu(
-            MenuItem("Start Mouse Jiggler", start_jiggler),
-            MenuItem("Pause Mouse Jiggler", pause_jiggler),
+            MenuItem("Start Mouse Jiggler", lambda i, j: jiggle_event.set()),
+            MenuItem("Pause Mouse Jiggler", lambda i, j: jiggle_event.clear()),
             Menu.SEPARATOR,
-            MenuItem("Copy Text", lambda i, j: app.postEvent(app, lambda: copy_text())),
-            MenuItem("Paste Text", lambda i, j: app.postEvent(app, lambda: paste_text())),
-            MenuItem("Cut Text", lambda i, j: app.postEvent(app, lambda: cut_text())),
-            MenuItem("Copy Image", lambda i, j: app.postEvent(app, lambda: copy_image())),
-            MenuItem("Paste Image", lambda i, j: app.postEvent(app, lambda: paste_image())),
+            MenuItem("Copy Text", trigger(signals.copy)),
+            MenuItem("Paste Text", trigger(signals.paste)),
+            MenuItem("Cut Text", trigger(signals.cut)),
+            MenuItem("Copy Image", trigger(signals.copy_image)),
+            MenuItem("Paste Image", trigger(signals.paste_image)),
             Menu.SEPARATOR,
-            MenuItem("Set Custom Copy Shortcut", lambda i, j: app.postEvent(app, lambda: set_custom_shortcut("copy"))),
-            MenuItem("Set Custom Paste Shortcut", lambda i, j: app.postEvent(app, lambda: set_custom_shortcut("paste"))),
-            MenuItem("Set Custom Cut Shortcut", lambda i, j: app.postEvent(app, lambda: set_custom_shortcut("cut"))),
+            MenuItem("Set Custom Copy Shortcut", trigger_custom("copy")),
+            MenuItem("Set Custom Paste Shortcut", trigger_custom("paste")),
+            MenuItem("Set Custom Cut Shortcut", trigger_custom("cut")),
             Menu.SEPARATOR,
             MenuItem("Exit", quit_app)
         )
@@ -142,9 +155,19 @@ def start_tray(app):
 
 def main():
     app = QApplication(sys.argv)
-    init_shortcuts(app)
-    threading.Thread(target=jiggle_loop, daemon=True).start()
+
+    # Connect signals to slots
+    signals.copy.connect(copy_text)
+    signals.paste.connect(paste_text)
+    signals.cut.connect(cut_text)
+    signals.copy_image.connect(copy_image)
+    signals.paste_image.connect(paste_image)
+    signals.custom_shortcut.connect(set_custom_shortcut)
+
     QTimer.singleShot(0, lambda: start_tray(app))
+    threading.Thread(target=jiggle_loop, daemon=True).start()
+
+    init_shortcuts(app)
     sys.exit(app.exec_())
 
 if __name__ == "__main__":
