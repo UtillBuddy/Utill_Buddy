@@ -50,12 +50,25 @@ jobs:
 
       - name: Build portable app
         run: |
-          pyinstaller --name "UtillBuddy${{ matrix.ext }}" --onefile utill_buddy.py
+          pyinstaller --name "UtillBuddy${{ matrix.ext }}" --onefile --clean --noconfirm utill_buddy.py
+          if [[ "${{ matrix.os }}" != "windows-latest" ]]; then
+            strip dist/UtillBuddy${{ matrix.ext }} || echo "strip command not found, skipping"
+          fi
+        shell: bash
 
-      - name: Prepare build directory
+      - name: Prepare build directory and copy binary (Linux/macOS)
+        if: runner.os != 'Windows'
         run: |
           mkdir -p portable/${{ matrix.label }}
-          cp dist/UtillBuddy${{ matrix.ext }} portable/${{ matrix.label }}/
+          cp -f dist/UtillBuddy${{ matrix.ext }} portable/${{ matrix.label }}/
+        shell: bash
+
+      - name: Prepare build directory and copy binary (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          if (-Not (Test-Path -Path "portable/Windows")) { New-Item -ItemType Directory -Path "portable/Windows" }
+          Copy-Item -Path dist/UtillBuddy.exe -Destination portable/Windows/ -Force
+        shell: pwsh
 
       - name: Update README.md
         run: |
