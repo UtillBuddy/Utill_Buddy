@@ -73,7 +73,7 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git stash push -m "auto-stash before pull" || echo "Nothing to stash"
+          git stash push -u -m "auto-stash before pull" || echo "Nothing to stash"
           git pull origin main --rebase
           git stash pop || echo "Nothing to stash pop"
           git add portable/${{ matrix.label }}/ README.md
