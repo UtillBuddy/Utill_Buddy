@@ -47,16 +47,15 @@ jobs:
         shell: bash
 
       - name: Prepare output directory
-          run: |
-            if [[ "$RUNNER_OS" == "Windows" ]]; then
+        run: |
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
             mkdir -p portable/Windows
             cp dist/UtillBuddy.exe portable/Windows/
-        else
+          else
             mkdir -p portable/${{ matrix.label }}
             cp -f dist/UtillBuddy${{ matrix.ext }} portable/${{ matrix.label }}/
-    fi
-  shell: bash
-
+          fi
+        shell: bash
 
       - name: Update README.md
         run: |
@@ -70,60 +69,33 @@ jobs:
 
       - name: Import GPG key and extract ID
         run: |
-          if [[ "$RUNNER_OS" == "Windows" ]]; then
-            echo "$GPG_PRIVATE_KEY" | gpg --batch --yes --import
-            KEY_ID=$(gpg --list-secret-keys --with-colons | grep '^sec' | cut -d: -f5)
-            echo "GPG_KEY_ID=$KEY_ID" >> $GITHUB_ENV
-          else
-            echo "$GPG_PRIVATE_KEY" | gpg --batch --yes --import
-            KEY_ID=$(gpg --list-secret-keys --with-colons | grep '^sec' | cut -d: -f5)
-            echo "GPG_KEY_ID=$KEY_ID" >> $GITHUB_ENV
-          fi
+          echo "$GPG_PRIVATE_KEY" | gpg --batch --yes --import
+          KEY_ID=$(gpg --list-secret-keys --with-colons | grep '^sec' | cut -d: -f5)
+          echo "GPG_KEY_ID=$KEY_ID" >> $GITHUB_ENV
         shell: bash
         env:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
 
       - name: GPG Sign and Push Commit
         run: |
-          if [[ "$RUNNER_OS" == "Windows" ]]; then
-            git config --global user.name "github-actions[bot]"
-            git config --global user.email "github-actions[bot]@users.noreply.github.com"
-            git config --global commit.gpgSign true
-            git config --global user.signingkey "$GPG_KEY_ID"
-            git config --global gpg.program gpg
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global commit.gpgSign true
+          git config --global user.signingkey "$GPG_KEY_ID"
+          git config --global gpg.program gpg
 
-            echo "$GPG_PASSPHRASE" | gpg --batch --yes --passphrase-fd 0 --pinentry-mode loopback --sign --output temp.sig --detach-sig README.md
+          echo "$GPG_PASSPHRASE" | gpg --batch --yes --passphrase-fd 0 --pinentry-mode loopback --sign --output temp.sig --detach-sig README.md
 
+          git pull --rebase --autostash origin main
+          git add portable/${{ matrix.label }}/ README.md
+          git commit -S -m "Add ${{ matrix.label }} build and update README [auto]" || echo "Nothing to commit"
+
+          for i in 1 2 3; do
+            git push origin main && break
+            echo "Push failed, retrying ($i)..."
             git pull --rebase --autostash origin main
-            git add portable/${{ matrix.label }}/ README.md
-            git commit -S -m "Add ${{ matrix.label }} build and update README [auto]" || echo "Nothing to commit"
-
-            for i in 1 2 3; do
-              git push origin main && break
-              echo "Push failed, retrying ($i)..."
-              git pull --rebase --autostash origin main
-              sleep 3
-            done
-          else
-            git config --global user.name "github-actions[bot]"
-            git config --global user.email "github-actions[bot]@users.noreply.github.com"
-            git config --global commit.gpgSign true
-            git config --global user.signingkey "$GPG_KEY_ID"
-            git config --global gpg.program gpg
-
-            echo "$GPG_PASSPHRASE" | gpg --batch --yes --passphrase-fd 0 --pinentry-mode loopback --sign --output temp.sig --detach-sig README.md
-
-            git pull --rebase --autostash origin main
-            git add portable/${{ matrix.label }}/ README.md
-            git commit -S -m "Add ${{ matrix.label }} build and update README [auto]" || echo "Nothing to commit"
-
-            for i in 1 2 3; do
-              git push origin main && break
-              echo "Push failed, retrying ($i)..."
-              git pull --rebase --autostash origin main
-              sleep 3
-            done
-          fi
+            sleep 3
+          done
         shell: bash
         env:
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
