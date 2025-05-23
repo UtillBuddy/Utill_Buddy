@@ -6,12 +6,12 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write  # Needed to push commits back to the repo
+  contents: write
 
 jobs:
   build:
     runs-on: ${{ matrix.os }}
-    continue-on-error: true  # Don't fail all jobs if one OS job fails
+    continue-on-error: true
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
@@ -32,63 +32,64 @@ jobs:
 
       - name: Set up Python
         uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
-
-      - name: Cache pip
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install pyqt5 pyautogui pyinstaller pystray pillow
 
-      - name: Build portable app
+      - name: Build app
         run: |
           pyinstaller --name "UtillBuddy${{ matrix.ext }}" --onefile --clean --noconfirm utill_buddy.py
           if [[ "${{ matrix.os }}" != "windows-latest" ]]; then
-            strip dist/UtillBuddy${{ matrix.ext }} || echo "strip command not found, skipping"
+            strip dist/UtillBuddy${{ matrix.ext }} || echo "strip unavailable"
           fi
         shell: bash
 
-      - name: Prepare build directory and copy binary (Linux/macOS)
+      - name: Prepare output directory (Linux/macOS)
         if: runner.os != 'Windows'
         run: |
           mkdir -p portable/${{ matrix.label }}
           cp -f dist/UtillBuddy${{ matrix.ext }} portable/${{ matrix.label }}/
         shell: bash
 
-      - name: Prepare build directory and copy binary (Windows)
+      - name: Prepare output directory (Windows)
         if: runner.os == 'Windows'
         run: |
-          if (-Not (Test-Path -Path "portable/Windows")) { New-Item -ItemType Directory -Path "portable/Windows" }
+          New-Item -ItemType Directory -Path "portable/Windows" -Force | Out-Null
           Copy-Item -Path dist/UtillBuddy.exe -Destination portable/Windows/ -Force
         shell: pwsh
 
       - name: Update README.md
         run: |
           NEW_LINK="🔹 [Download for ${{ matrix.label }}](portable/${{ matrix.label }}/UtillBuddy${{ matrix.ext }})"
-          START="<!-- BUILDS START -->"
-          END="<!-- BUILDS END -->"
-          awk -v s="$START" -v e="$END" -v l="$NEW_LINK" '
+          awk -v s="<!-- BUILDS START -->" -v e="<!-- BUILDS END -->" -v l="$NEW_LINK" '
             $0 ~ s { print; print l; skip=1; next }
             $0 ~ e { skip=0; print; next }
             skip == 0 { print }
           ' README.md > README.tmp && mv README.tmp README.md
         shell: bash
 
-      - name: Commit build and updated README
+      - name: Import GPG key
+        run: |
+          echo "$GPG_PRIVATE_KEY" | gpg --batch --yes --import
+          KEY_ID=$(gpg --list-secret-keys --with-colons | grep '^sec' | cut -d: -f5)
+          echo "GPG_KEY_ID=$KEY_ID" >> $GITHUB_ENV
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+
+      - name: GPG Sign and Push Commit
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global commit.gpgSign true
+          git config --global user.signingkey "$GPG_KEY_ID"
+          git config --global gpg.program gpg
+          echo "$GPG_PASSPHRASE" | gpg --batch --yes --passphrase-fd 0 --pinentry-mode loopback --sign --output /dev/null --detach-sig README.md
           git pull --rebase --autostash origin main
           git add portable/${{ matrix.label }}/ README.md
-          git commit -m "Add ${{ matrix.label }} build and update README [auto]" || echo "Nothing to commit"
+          git commit -S -m "Add ${{ matrix.label }} build and update README [auto]" || echo "Nothing to commit"
           git push origin main
         env:
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
