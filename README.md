@@ -25,8 +25,6 @@
 
 <!-- BUILDS START -->
 🔹 [Download for macOS](portable/macOS/UtillBuddy.app)
-🔹 [Download for UbuntuOS]([portable/macOS/UtillBuddy.app](https://github.com/UtillBuddy/Utill_Buddy/tree/main/portable/Linux))
-🔹 [Download for WindowsOS]([portable/macOS/UtillBuddy.app](https://github.com/UtillBuddy/Utill_Buddy/tree/main/portable/Windows))
 <!-- BUILDS END -->
 
 ---
