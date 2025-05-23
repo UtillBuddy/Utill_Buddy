@@ -26,7 +26,7 @@
 ## 📥 Downloads
 
 <!-- BUILDS START -->
-🔹 [Download for macOS](portable/macOS/UtillBuddy.app)
+🔹 [Download for Linux](portable/Linux/UtillBuddy)
 <!-- BUILDS END -->
 
 ---
