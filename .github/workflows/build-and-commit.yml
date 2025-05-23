@@ -5,10 +5,13 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+permissions:
+  contents: write  # Needed to commit and push to the repo
+
 jobs:
   build:
     runs-on: ${{ matrix.os }}
-    continue-on-error: true  # ✅ Continue even if one OS build fails
+    continue-on-error: true  # Don't fail other jobs if one OS job fails
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
@@ -25,15 +28,15 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v3.6.0
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v4.8.0
         with:
           python-version: '3.10'
 
       - name: Cache pip
-        uses: actions/cache@v3
+        uses: actions/cache@v3.3.2
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
@@ -49,54 +52,30 @@ jobs:
         run: |
           pyinstaller --name "UtillBuddy${{ matrix.ext }}" --onefile utill_buddy.py
 
-      - name: Upload build artifact
-        if: success()
-        uses: actions/upload-artifact@v3
-        with:
-          name: UtillBuddy-${{ matrix.label }}
-          path: dist/UtillBuddy${{ matrix.ext }}
-
-  finalize:
-    needs: build
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-
-      - name: Download all artifacts
-        uses: actions/download-artifact@v3
-
-      - name: Organize builds
+      - name: Prepare build directory
         run: |
-          mkdir -p portable/Linux portable/Windows portable/macOS
-          [ -f UtillBuddy-Linux/UtillBuddy ] && mv -f UtillBuddy-Linux/UtillBuddy portable/Linux/
-          [ -f UtillBuddy-Windows/UtillBuddy.exe ] && mv -f UtillBuddy-Windows/UtillBuddy.exe portable/Windows/
-          [ -f UtillBuddy-macOS/UtillBuddy.app ] && mv -f UtillBuddy-macOS/UtillBuddy.app portable/macOS/
+          mkdir -p portable/${{ matrix.label }}
+          cp dist/UtillBuddy${{ matrix.ext }} portable/${{ matrix.label }}/
 
       - name: Update README.md
         run: |
+          NEW_LINK="🔹 [Download for ${{ matrix.label }}](portable/${{ matrix.label }}/UtillBuddy${{ matrix.ext }})"
           START="<!-- BUILDS START -->"
           END="<!-- BUILDS END -->"
-          echo "$START" > README.tmp
-          [ -f portable/Linux/UtillBuddy ] && echo "🔹 [Download for Linux](portable/Linux/UtillBuddy)" >> README.tmp
-          [ -f portable/Windows/UtillBuddy.exe ] && echo "🔹 [Download for Windows](portable/Windows/UtillBuddy.exe)" >> README.tmp
-          [ -f portable/macOS/UtillBuddy.app ] && echo "🔹 [Download for macOS](portable/macOS/UtillBuddy.app)" >> README.tmp
-          echo "$END" >> README.tmp
-          awk -v s="$START" -v e="$END" 'BEGIN{skip=0}
-            $0 ~ s {print; while((getline line < "README.tmp") > 0) print line; skip=1; next}
-            $0 ~ e {skip=0; next}
-            skip==0 {print}
-          ' README.md > README.new && mv README.new README.md
+          awk -v s="$START" -v e="$END" -v l="$NEW_LINK" '
+            $0 ~ s { print; print l; skip=1; next }
+            $0 ~ e { skip=0 }
+            skip == 0 { print }
+          ' README.md > README.tmp && mv README.tmp README.md
+        shell: bash
 
-      - name: Commit and push updates
+      - name: Commit build and updated README
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add -A portable/ README.md   # ✅ Add all changes including overwrites
-          git commit -m "Update builds and README [auto]" || echo "Nothing to commit"
+          git pull --rebase --autostash origin main
+          git add portable/${{ matrix.label }}/ README.md
+          git commit -m "Add ${{ matrix.label }} build and update README [auto]" || echo "Nothing to commit"
           git push origin main
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
