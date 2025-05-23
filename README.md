@@ -24,8 +24,7 @@
 ## 📥 Downloads
 
 <!-- BUILDS START -->
-🔹 [Download for Linux](portable/Linux/UtillBuddy)
-<!-- Other platform builds are planned and will be added here once available. -->
+🔹 [Download for macOS](portable/macOS/UtillBuddy.app)
 <!-- BUILDS END -->
 
 ---
