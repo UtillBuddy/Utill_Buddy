@@ -48,8 +48,13 @@ jobs:
 
       - name: Prepare output directory
         run: |
-          mkdir -p portable/${{ matrix.label }}
-          cp -f dist/UtillBuddy${{ matrix.ext }} portable/${{ matrix.label }}/ || echo "Skip copy on non-bash"
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            mkdir -Force -Path portable\\${{ matrix.label }}
+            cp dist\\UtillBuddy.exe portable\\${{ matrix.label }}\\
+          else
+            mkdir -p portable/${{ matrix.label }}
+            cp -f dist/UtillBuddy${{ matrix.ext }} portable/${{ matrix.label }}/
+          fi
         shell: bash
 
       - name: Update README.md
@@ -62,35 +67,64 @@ jobs:
           ' README.md > README.tmp && mv README.tmp README.md
         shell: bash
 
-      - name: Import GPG key and set GPG_KEY_ID (cross-platform)
+      - name: Import GPG key and extract ID
         run: |
-          echo "$env:GPG_PRIVATE_KEY" | gpg --batch --yes --import
-          $key = gpg --list-secret-keys --with-colons | Select-String '^sec' | ForEach-Object { ($_ -split ':')[4] }
-          echo "GPG_KEY_ID=$key" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-        shell: pwsh
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            echo "$GPG_PRIVATE_KEY" | gpg --batch --yes --import
+            KEY_ID=$(gpg --list-secret-keys --with-colons | grep '^sec' | cut -d: -f5)
+            echo "GPG_KEY_ID=$KEY_ID" >> $GITHUB_ENV
+          else
+            echo "$GPG_PRIVATE_KEY" | gpg --batch --yes --import
+            KEY_ID=$(gpg --list-secret-keys --with-colons | grep '^sec' | cut -d: -f5)
+            echo "GPG_KEY_ID=$KEY_ID" >> $GITHUB_ENV
+          fi
+        shell: bash
         env:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
 
       - name: GPG Sign and Push Commit
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git config --global commit.gpgSign true
-          git config --global user.signingkey "$env:GPG_KEY_ID"
-          git config --global gpg.program gpg
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            git config --global user.name "github-actions[bot]"
+            git config --global user.email "github-actions[bot]@users.noreply.github.com"
+            git config --global commit.gpgSign true
+            git config --global user.signingkey "$GPG_KEY_ID"
+            git config --global gpg.program gpg
 
-          echo "$env:GPG_PASSPHRASE" | gpg --batch --yes --passphrase-fd 0 --pinentry-mode loopback --sign --output temp.sig --detach-sig README.md
+            echo "$GPG_PASSPHRASE" | gpg --batch --yes --passphrase-fd 0 --pinentry-mode loopback --sign --output temp.sig --detach-sig README.md
 
-          git pull --rebase --autostash origin main
-          git add portable/${{ matrix.label }}/ README.md
-          git commit -S -m "Add ${{ matrix.label }} build and update README [auto]" || echo "Nothing to commit"
-
-          for ($i = 0; $i -lt 3; $i++) {
-            git push origin main && break
-            echo "Push failed, retrying..."
             git pull --rebase --autostash origin main
-          }
-        shell: pwsh
+            git add portable/${{ matrix.label }}/ README.md
+            git commit -S -m "Add ${{ matrix.label }} build and update README [auto]" || echo "Nothing to commit"
+
+            for i in 1 2 3; do
+              git push origin main && break
+              echo "Push failed, retrying ($i)..."
+              git pull --rebase --autostash origin main
+              sleep 3
+            done
+          else
+            git config --global user.name "github-actions[bot]"
+            git config --global user.email "github-actions[bot]@users.noreply.github.com"
+            git config --global commit.gpgSign true
+            git config --global user.signingkey "$GPG_KEY_ID"
+            git config --global gpg.program gpg
+
+            echo "$GPG_PASSPHRASE" | gpg --batch --yes --passphrase-fd 0 --pinentry-mode loopback --sign --output temp.sig --detach-sig README.md
+
+            git pull --rebase --autostash origin main
+            git add portable/${{ matrix.label }}/ README.md
+            git commit -S -m "Add ${{ matrix.label }} build and update README [auto]" || echo "Nothing to commit"
+
+            for i in 1 2 3; do
+              git push origin main && break
+              echo "Push failed, retrying ($i)..."
+              git pull --rebase --autostash origin main
+              sleep 3
+            done
+          fi
+        shell: bash
         env:
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+          GPG_KEY_ID: ${{ env.GPG_KEY_ID }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
