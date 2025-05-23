@@ -89,7 +89,12 @@ jobs:
           git pull --rebase --autostash origin main
           git add portable/${{ matrix.label }}/ README.md
           git commit -S -m "Add ${{ matrix.label }} build and update README [auto]" || echo "Nothing to commit"
-          git push origin main
+
+          for i in 1 2 3; do
+            git push origin main && break
+            echo "Push failed, retrying ($i)..."
+            git pull --rebase --autostash origin main
+          done
         env:
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
