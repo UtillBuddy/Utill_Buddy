@@ -26,10 +26,7 @@
 ## 📥 Downloads
 
 <!-- BUILDS START -->
-🔹 [Download for Linux](portable/Linux/UtillBuddy)
-🔹 [Download for Windows](portable/Windows/UtillBuddy.exe)
-🔹 [Download for Mac]https://github.com/UtillBuddy/Utill_Buddy/blob/main/portable/macOS/UtillBuddy.app
-
+🔹 [Download for macOS](portable/macOS/UtillBuddy.app)
 <!-- BUILDS END -->
 
 ---
