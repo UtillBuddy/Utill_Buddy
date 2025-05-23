@@ -26,7 +26,11 @@
 ## 📥 Downloads
 
 <!-- BUILDS START -->
+<<<<<<< Updated upstream
 🔹 [Download for Linux](portable/Linux/UtillBuddy)
+=======
+🔹 [Download for Windows](portable/Windows/UtillBuddy.exe)
+>>>>>>> Stashed changes
 <!-- BUILDS END -->
 
 ---
