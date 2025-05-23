@@ -69,7 +69,7 @@ jobs:
           ' README.md > README.tmp && mv README.tmp README.md
         shell: bash
 
-           - name: Commit build and updated README
+      - name: Commit build and updated README
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
