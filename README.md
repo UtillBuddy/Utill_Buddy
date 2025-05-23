@@ -24,7 +24,7 @@
 ## 📥 Downloads
 
 <!-- BUILDS START -->
-🔹 [Download for Windows](portable/Windows/UtillBuddy.exe)
+🔹 [Download for macOS](portable/macOS/UtillBuddy.app)
 <!-- BUILDS END -->
 
 ---
