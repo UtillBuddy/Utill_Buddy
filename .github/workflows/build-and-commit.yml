@@ -4,6 +4,9 @@ on:
   push:
     branches: [ main ]
 
+permissions:
+  contents: write  # Allow push via GITHUB_TOKEN
+
 jobs:
   build:
     runs-on: ${{ matrix.os }}
@@ -48,15 +51,17 @@ jobs:
           pyinstaller --name "UtillBuddy${{ matrix.ext }}" --onefile utill_buddy.py
 
       - name: Prepare build directory
+        shell: bash
         run: |
           mkdir -p portable/${{ matrix.label }}
-          if [ "${{ matrix.os }}" == "windows-latest" ]; then
-            copy dist\UtillBuddy${{ matrix.ext }} portable\${{ matrix.label }}\
+          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            cp dist/UtillBuddy${{ matrix.ext }} portable/${{ matrix.label }}/
           else
             cp dist/UtillBuddy${{ matrix.ext }} portable/${{ matrix.label }}/
           fi
 
       - name: Update README.md
+        shell: bash
         run: |
           NEW_LINK="🔹 [Download for ${{ matrix.label }}](portable/${{ matrix.label }}/UtillBuddy${{ matrix.ext }})"
           START="<!-- BUILDS START -->"
@@ -66,7 +71,6 @@ jobs:
             $0 ~ e { skip=0 }
             skip == 0 { print }
           ' README.md > README.tmp && mv README.tmp README.md
-        shell: bash
 
       - name: Commit build and updated README
         run: |
@@ -74,6 +78,7 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add portable/${{ matrix.label }}/ README.md
           git commit -m "Add ${{ matrix.label }} build and update README [auto]" || echo "Nothing to commit"
+          git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git
           git push
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
