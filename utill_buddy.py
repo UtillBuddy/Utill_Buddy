@@ -63,8 +63,10 @@ class MouseJiggler:
             pyautogui.moveTo(x, y, duration=0.1)
             time.sleep(0.1)
             pyautogui.moveTo(*self._get_random_offset(), duration=0.1)
+        except pyautogui.FailSafeException as fse:
+            logger.error(f"Mouse movement failed due to PyAutoGUI FailSafeException: {fse}")
         except Exception as exc:
-            logger.error(f"Mouse movement failed: {exc}")
+            logger.error(f"Mouse movement failed due to an unexpected error: {type(exc).__name__} - {exc}")
 
     def _loop(self) -> None:
         """Main jiggling loop."""
@@ -242,13 +244,13 @@ def paste_text() -> None:
         QMessageBox.warning(None, "Clipboard", "No text in clipboard")
 
 def cut_text() -> None:
-    """Cut text (copy then clear clipboard)."""
-    text = QApplication.clipboard().text()
+    """Cut text (clear clipboard then show message)."""
+    text = QApplication.clipboard().text()  # Store text before clearing
     if text:
         if _with_retry(QApplication.clipboard().clear):
             QMessageBox.information(None, "Cut Text", f"Cut: {text}")
         else:
-            QMessageBox.warning(None, "Error", "Failed to cut text")
+            QMessageBox.warning(None, "Error", "Failed to cut text. Clipboard could not be cleared.")
     else:
         QMessageBox.warning(None, "Clipboard", "No text to cut")
 
@@ -309,20 +311,26 @@ def start_tray(app: QApplication) -> None:
     def emit(signal):
         return lambda: signal.emit()
 
+    def get_jiggler_menu_text() -> str:
+        """Returns the dynamic text for the jiggler menu item."""
+        return "✔ Jiggler: On" if jiggler.is_running() else "◼ Jiggler: Off"
+
     def toggle_jiggler():
         if jiggler.is_running():
             jiggler.pause()
         else:
             jiggler.start()
+        # Update tray title (menu item text is now dynamic)
         tray.title = f"{APP_NAME} - Jiggler: {'On' if jiggler.is_running() else 'Off'}"
+        # The menu item itself will call get_jiggler_menu_text to update.
 
     tray = Icon(
         APP_NAME,
         make_tray_icon(),
-        title=f"{APP_NAME} - Jiggler: Off",
+        title=f"{APP_NAME} - Jiggler: Off",  # Initial title
         menu=Menu(
             MenuItem(
-                lambda: "✔ Jiggler: On" if jiggler.is_running() else "◼ Jiggler: Off",
+                get_jiggler_menu_text,  # Use the function here
                 toggle_jiggler,
                 default=True
             ),
@@ -385,7 +393,8 @@ def main() -> None:
         "copy_image": signals.copy_image.emit,
         "paste_image": signals.paste_image.emit,
     }
-    ShortcutManager(app, handlers)
+    shortcut_mgr = ShortcutManager(app, handlers)
+    app.setProperty("shortcut_manager", shortcut_mgr)
     signals.custom_shortcut.connect(lambda action: app.property("shortcut_manager").set_shortcut(action))
 
     # Start tray icon
