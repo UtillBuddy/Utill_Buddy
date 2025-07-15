@@ -33,10 +33,10 @@ def save_template(template):
     email_templates_collection.insert_one(template.dict())
 
 
-def update_existing_template(template):
+def update_existing_template(user_id: str, template_data: dict):
     email_templates_collection.update_one(
-        {"user_id": template.user_id},
-        {"$set": template.dict()}
+        {"user_id": user_id},
+        {"$set": template_data}
     )
 
 

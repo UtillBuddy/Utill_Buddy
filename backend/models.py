@@ -39,7 +39,6 @@ class EmailLog(BaseModel):
 
 
 class EmailTemplate(BaseModel):
-    user_id: str
     subject: str
     body: str
     cv_link: str
