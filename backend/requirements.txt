@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+python-dotenv
+pymongo
+google-api-python-client
+google-auth-httplib2
+google-auth-oauthlib
+firebase-admin
+passlib[bcrypt]
+python-jose[cryptography]
