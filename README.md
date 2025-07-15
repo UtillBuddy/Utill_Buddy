@@ -32,6 +32,8 @@ The backend is built with FastAPI and MongoDB.
     ENCRYPTION_KEY="your_encryption_key"
     OUTLOOK_CLIENT_ID="your_outlook_client_id"
     OUTLOOK_CLIENT_SECRET="your_outlook_client_secret"
+    STRIPE_API_KEY="your_stripe_api_key"
+    STRIPE_WEBHOOK_SECRET="your_stripe_webhook_secret"
     ```
 
     To generate an encryption key, you can use the following Python code:

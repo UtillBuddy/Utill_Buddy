@@ -10,6 +10,7 @@ users_collection = db["users"]
 recipients_collection = db["recipients"]
 email_logs_collection = db["email_logs"]
 email_templates_collection = db["email_templates"]
+plans_collection = db["plans"]
 
 
 def get_user(email: str):
@@ -105,3 +106,7 @@ def save_smtp_config(user_id: str, config):
             "email_config.credentials": encrypted_config
         }}
     )
+
+
+def get_plans():
+    return list(plans_collection.find({}))

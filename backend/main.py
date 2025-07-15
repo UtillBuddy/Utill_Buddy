@@ -2,7 +2,7 @@ import os
 from fastapi import FastAPI, Depends, HTTPException, File, UploadFile
 from pydantic import BaseModel
 from backend.auth import create_access_token, verify_firebase_token, get_password_hash, verify_password, get_current_user
-from backend.database import get_user, create_user, get_distinct_regions, get_recipients_by_region, save_template, update_existing_template, get_template, get_email_counts_for_user, save_email_config, update_user_cv_link, update_user_plan, save_outlook_tokens, save_smtp_config
+from backend.database import get_user, create_user, get_distinct_regions, get_recipients_by_region, save_template, update_existing_template, get_template, get_email_counts_for_user, save_email_config, update_user_cv_link, update_user_plan, save_outlook_tokens, save_smtp_config, get_plans
 from backend.models import EmailTemplate, User, Token, EmailConfig, SmtpConfig
 from backend.email_sender import send_emails
 from firebase_admin import storage, credentials, initialize_app
@@ -14,6 +14,8 @@ def create_app():
     # Firebase Admin SDK setup
     cred = credentials.Certificate(os.getenv("FIREBASE_CREDENTIALS_PATH"))
     initialize_app(cred)
+
+    stripe.api_key = os.getenv("STRIPE_API_KEY")
 
     app.include_router(outlook_router, prefix="/outlook", tags=["outlook"])
 
@@ -126,6 +128,60 @@ def create_app():
         # This is a placeholder. In a real application, you would verify the credentials.
         save_smtp_config(current_user, config)
         return {"message": "SMTP credentials verified and saved"}
+
+
+    @app.get("/plans")
+    async def plans(current_user: str = Depends(get_current_user)):
+        return get_plans()
+
+
+    @app.post("/create-checkout-session")
+    async def create_checkout_session(plan_id: str, current_user: str = Depends(get_current_user)):
+        plan = plans_collection.find_one({"_id": plan_id})
+        session = stripe.checkout.Session.create(
+            payment_method_types=["card"],
+            line_items=[{
+                "price_data": {
+                    "currency": "usd",
+                    "product_data": {
+                        "name": plan["name"],
+                    },
+                    "unit_amount": plan["price"],
+                },
+                "quantity": 1,
+            }],
+            mode="payment",
+            success_url="http://localhost:3000/success",
+            cancel_url="http://localhost:3000/cancel",
+            client_reference_id=current_user,
+        )
+        return {"id": session.id}
+
+
+    @app.post("/webhook")
+    async def webhook(request: Request):
+        payload = await request.body()
+        sig_header = request.headers.get("stripe-signature")
+        event = None
+
+        try:
+            event = stripe.Webhook.construct_event(
+                payload, sig_header, os.getenv("STRIPE_WEBHOOK_SECRET")
+            )
+        except ValueError as e:
+            # Invalid payload
+            raise HTTPException(status_code=400, detail=str(e))
+        except stripe.error.SignatureVerificationError as e:
+            # Invalid signature
+            raise HTTPException(status_code=400, detail=str(e))
+
+        # Handle the event
+        if event["type"] == "checkout.session.completed":
+            session = event["data"]["object"]
+            user_id = session["client_reference_id"]
+            update_user_plan(user_id, "paid")
+
+        return {"status": "success"}
 
 
     return app
