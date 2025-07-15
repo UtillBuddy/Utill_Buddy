@@ -13,3 +13,6 @@ pytest
 requests
 msal
 stripe
+celery
+redis
+fastapi-csrf-protect

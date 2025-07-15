@@ -1,12 +1,19 @@
 import os
-from fastapi import FastAPI, Depends, HTTPException, File, UploadFile
+from fastapi import FastAPI, Depends, HTTPException, File, UploadFile, Request
 from pydantic import BaseModel
-from backend.auth import create_access_token, verify_firebase_token, get_password_hash, verify_password, get_current_user
-from backend.database import get_user, create_user, get_distinct_regions, get_recipients_by_region, save_template, update_existing_template, get_template, get_email_counts_for_user, save_email_config, update_user_cv_link, update_user_plan, save_outlook_tokens, save_smtp_config, get_plans
-from backend.models import EmailTemplate, User, Token, EmailConfig, SmtpConfig
-from backend.email_sender import send_emails
+from backend.auth import create_access_token, verify_firebase_token, get_current_user
+from backend.security import get_password_hash, verify_password
+from backend.database import get_user, create_user, get_distinct_regions, get_recipients_by_region, save_template, update_existing_template, get_template, get_email_counts_for_user, save_email_config, update_user_cv_link, update_user_plan, save_outlook_tokens, save_smtp_config, get_plans, save_yahoo_config, save_zoho_config
+from backend.models import EmailTemplate, User, Token, EmailConfig, SmtpConfig, YahooConfig, ZohoConfig
+from backend.tasks import send_emails_task
 from firebase_admin import storage, credentials, initialize_app
 from backend.outlook import router as outlook_router
+import stripe
+from fastapi_csrf_protect import CsrfProtect
+from fastapi_csrf_protect.exceptions import CsrfProtectError
+from starlette.responses import JSONResponse
+
+from backend.socketio_app import app as socketio_app
 
 def create_app():
     app = FastAPI()
@@ -18,34 +25,52 @@ def create_app():
     stripe.api_key = os.getenv("STRIPE_API_KEY")
 
     app.include_router(outlook_router, prefix="/outlook", tags=["outlook"])
+    app.mount("/ws", socketio_app)
+
+    @app.exception_handler(CsrfProtectError)
+    def csrf_protect_exception_handler(request: Request, exc: CsrfProtectError):
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"detail": exc.message}
+        )
+
+    @CsrfProtect.load_config
+    def get_csrf_config():
+        return {"secret_key": os.getenv("SECRET_KEY")}
 
 
     @app.post("/register", response_model=Token)
-    async def register(user: User):
+    async def register(user: User, csrf_protect: CsrfProtect = Depends()):
         db_user = get_user(user.email)
         if db_user:
             raise HTTPException(status_code=400, detail="Email already registered")
+
+        csrf_protect.validate_csrf(request)
         hashed_password = get_password_hash(user.password)
         create_user(user.email, hashed_password)
         access_token = create_access_token(data={"sub": user.email})
         return {"access_token": access_token, "token_type": "bearer"}
 
     @app.post("/login", response_model=Token)
-    async def login(user: User):
+    async def login(user: User, csrf_protect: CsrfProtect = Depends()):
         db_user = get_user(user.email)
         if not db_user or not verify_password(user.password, db_user["hashed_password"]):
             raise HTTPException(status_code=401, detail="Incorrect email or password")
+
+        csrf_protect.validate_csrf(request)
         access_token = create_access_token(data={"sub": user.email})
         return {"access_token": access_token, "token_type": "bearer"}
 
     @app.post("/token", response_model=Token)
-    async def login_with_firebase(token: str):
+    async def login_with_firebase(token: str, csrf_protect: CsrfProtect = Depends()):
         decoded_token = verify_firebase_token(token)
         email = decoded_token["email"]
         db_user = get_user(email)
         if not db_user:
             # Create a new user if they don't exist in the database
             create_user(email, "") # Store an empty password for Firebase users
+
+        csrf_protect.validate_csrf(request)
         access_token = create_access_token(data={"sub": email})
         return {"access_token": access_token, "token_type": "bearer"}
 
@@ -79,9 +104,8 @@ def create_app():
         user = get_user(current_user)
         template = get_template(current_user)
         recipients = get_recipients_by_region(region)
-        # This should be a background task
-        send_emails(user, template, recipients)
-        return {"message": "Email sending process started"}
+        send_emails_task.delay(user, template, recipients)
+        return {"message": "Email sending process has been queued."}
 
 
     @app.get("/status")
@@ -182,6 +206,29 @@ def create_app():
             update_user_plan(user_id, "paid")
 
         return {"status": "success"}
+
+
+    @app.get("/preview-email")
+    async def preview_email(current_user: str = Depends(get_current_user)):
+        user = get_user(current_user)
+        template = get_template(current_user)
+        first_name = "John"
+        html_body = template["body"].format(first_name=first_name, cv_link=template["cv_link"], user_name=user["email"], user_mobile="", user_secondary_mobile="", user_linkedin="")
+        return html_body
+
+
+    @app.post("/verify-yahoo-creds")
+    async def verify_yahoo_creds(config: YahooConfig, current_user: str = Depends(get_current_user)):
+        # This is a placeholder. In a real application, you would verify the credentials.
+        save_yahoo_config(current_user, config)
+        return {"message": "Yahoo credentials verified and saved"}
+
+
+    @app.post("/verify-zoho-creds")
+    async def verify_zoho_creds(config: ZohoConfig, current_user: str = Depends(get_current_user)):
+        # This is a placeholder. In a real application, you would verify the credentials.
+        save_zoho_config(current_user, config)
+        return {"message": "Zoho credentials verified and saved"}
 
 
     return app
