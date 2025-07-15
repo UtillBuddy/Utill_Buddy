@@ -4,9 +4,11 @@ from pydantic import BaseModel
 from backend.auth import create_access_token, verify_firebase_token, get_password_hash, verify_password, get_current_user
 from backend.database import get_user, create_user, get_distinct_regions, get_recipients_by_region, save_template, update_existing_template, get_template, get_email_counts_for_user, save_email_config, update_user_cv_link, update_user_plan, save_outlook_tokens, save_smtp_config, get_plans
 from backend.models import EmailTemplate, User, Token, EmailConfig, SmtpConfig
-from backend.email_sender import send_emails
+from backend.tasks import send_emails_task
 from firebase_admin import storage, credentials, initialize_app
 from backend.outlook import router as outlook_router
+
+from backend.socketio_app import app as socketio_app
 
 def create_app():
     app = FastAPI()
@@ -18,6 +20,7 @@ def create_app():
     stripe.api_key = os.getenv("STRIPE_API_KEY")
 
     app.include_router(outlook_router, prefix="/outlook", tags=["outlook"])
+    app.mount("/ws", socketio_app)
 
 
     @app.post("/register", response_model=Token)
@@ -79,9 +82,8 @@ def create_app():
         user = get_user(current_user)
         template = get_template(current_user)
         recipients = get_recipients_by_region(region)
-        # This should be a background task
-        send_emails(user, template, recipients)
-        return {"message": "Email sending process started"}
+    send_emails_task.delay(user, template, recipients)
+    return {"message": "Email sending process has been queued."}
 
 
     @app.get("/status")
@@ -182,6 +184,15 @@ def create_app():
             update_user_plan(user_id, "paid")
 
         return {"status": "success"}
+
+
+    @app.get("/preview-email")
+    async def preview_email(current_user: str = Depends(get_current_user)):
+        user = get_user(current_user)
+        template = get_template(current_user)
+        first_name = "John"
+        html_body = template["body"].format(first_name=first_name, cv_link=template["cv_link"], user_name=user["email"], user_mobile="", user_secondary_mobile="", user_linkedin="")
+        return html_body
 
 
     return app

@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import axios from "axios";
+import ReactQuill from "react-quill";
+import "react-quill/dist/quill.snow.css";
 
 export default function EditTemplate() {
   const [subject, setSubject] = useState("");
@@ -48,26 +50,31 @@ export default function EditTemplate() {
   };
 
   return (
-    <div>
-      <h1>Edit Email Template</h1>
-      <input
-        type="text"
-        placeholder="Subject"
-        value={subject}
-        onChange={(e) => setSubject(e.target.value)}
-      />
-      <textarea
-        placeholder="Body"
-        value={body}
-        onChange={(e) => setBody(e.target.value)}
-      />
-      <input
-        type="text"
-        placeholder="CV Link"
-        value={cvLink}
-        onChange={(e) => setCvLink(e.target.value)}
-      />
-      <button onClick={handleUpdateTemplate}>Update Template</button>
+    <div className="flex items-center justify-center min-h-screen bg-gray-100">
+      <div className="w-full max-w-2xl p-8 space-y-6 bg-white rounded-lg shadow-md">
+        <h1 className="text-2xl font-bold text-center">Edit Email Template</h1>
+        <input
+          type="text"
+          placeholder="Subject"
+          value={subject}
+          onChange={(e) => setSubject(e.target.value)}
+          className="w-full px-4 py-2 text-gray-700 bg-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        <ReactQuill value={body} onChange={setBody} />
+        <input
+          type="text"
+          placeholder="CV Link"
+          value={cvLink}
+          onChange={(e) => setCvLink(e.target.value)}
+          className="w-full px-4 py-2 text-gray-700 bg-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        <button
+          onClick={handleUpdateTemplate}
+          className="w-full px-4 py-2 font-bold text-white bg-blue-500 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          Update Template
+        </button>
+      </div>
     </div>
   );
 }
