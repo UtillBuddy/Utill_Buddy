@@ -37,21 +37,21 @@ export default function Dashboard() {
   }, []);
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-md">
-        <h1 className="text-2xl font-bold text-center">Dashboard</h1>
+    <div className="flex items-center justify-center min-h-screen bg-background">
+      <div className="w-full max-w-md p-8 space-y-6 bg-surface rounded-lg shadow-md">
+        <h1 className="text-2xl font-bold text-center text-primary">Dashboard</h1>
         <div className="flex justify-between">
-          <div className="p-4 text-center bg-gray-200 rounded-md">
-            <p className="text-lg font-bold">{stats.total}</p>
-            <p className="text-gray-600">Total Emails</p>
+          <div className="p-4 text-center bg-background rounded-md">
+            <p className="text-lg font-bold text-primary">{stats.total}</p>
+            <p className="text-secondary">Total Emails</p>
           </div>
-          <div className="p-4 text-center bg-gray-200 rounded-md">
-            <p className="text-lg font-bold">{stats.sent}</p>
-            <p className="text-gray-600">Sent Emails</p>
+          <div className="p-4 text-center bg-background rounded-md">
+            <p className="text-lg font-bold text-success">{stats.sent}</p>
+            <p className="text-secondary">Sent Emails</p>
           </div>
-          <div className="p-4 text-center bg-gray-200 rounded-md">
-            <p className="text-lg font-bold">{stats.pending}</p>
-            <p className="text-gray-600">Pending Emails</p>
+          <div className="p-4 text-center bg-background rounded-md">
+            <p className="text-lg font-bold text-error">{stats.pending}</p>
+            <p className="text-secondary">Pending Emails</p>
           </div>
         </div>
       </div>

@@ -90,7 +90,7 @@ def save_outlook_tokens(user_id: str, access_token: str, refresh_token: str):
     )
 
 
-from backend.encryption import encrypt
+from backend.security import encrypt
 
 def save_smtp_config(user_id: str, config):
     encrypted_config = {
