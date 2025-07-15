@@ -10,6 +10,9 @@ export default function EmailConfig() {
   const [port, setPort] = useState(587);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [yahooAppPassword, setYahooAppPassword] = useState("");
+  const [zohoClientId, setZohoClientId] = useState("");
+  const [zohoClientSecret, setZohoClientSecret] = useState("");
 
   const handleSaveGmailConfig = async () => {
     try {
@@ -60,6 +63,8 @@ export default function EmailConfig() {
         >
           <option value="gmail">Gmail</option>
           <option value="outlook">Outlook</option>
+          <option value="yahoo">Yahoo</option>
+          <option value="zoho">Zoho</option>
           <option value="smtp">Custom SMTP</option>
         </select>
 
@@ -87,6 +92,49 @@ export default function EmailConfig() {
           >
             Connect with Outlook
           </button>
+        )}
+
+        {provider === "yahoo" && (
+          <>
+            <input
+              type="password"
+              placeholder="Yahoo App Password"
+              value={yahooAppPassword}
+              onChange={(e) => setYahooAppPassword(e.target.value)}
+              className="w-full px-4 py-2 text-gray-700 bg-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <button
+              // onClick={handleSaveYahooConfig}
+              className="w-full px-4 py-2 font-bold text-white bg-blue-500 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              Save Yahoo Configuration
+            </button>
+          </>
+        )}
+
+        {provider === "zoho" && (
+          <>
+            <input
+              type="text"
+              placeholder="Zoho Client ID"
+              value={zohoClientId}
+              onChange={(e) => setZohoClientId(e.target.value)}
+              className="w-full px-4 py-2 text-gray-700 bg-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <input
+              type="text"
+              placeholder="Zoho Client Secret"
+              value={zohoClientSecret}
+              onChange={(e) => setZohoClientSecret(e.target.value)}
+              className="w-full px-4 py-2 text-gray-700 bg-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <button
+              // onClick={handleSaveZohoConfig}
+              className="w-full px-4 py-2 font-bold text-white bg-blue-500 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              Save Zoho Configuration
+            </button>
+          </>
         )}
 
         {provider === "smtp" && (

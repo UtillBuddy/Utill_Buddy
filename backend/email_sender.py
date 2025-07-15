@@ -119,8 +119,20 @@ def send_outlook_email(user, to_email, subject, body):
     response = requests.post("https://graph.microsoft.com/v1.0/me/sendMail", headers=headers, json=email_data)
     response.raise_for_status()
 
-def get_yahoo_service():
+def get_yahoo_service(user):
     # Placeholder for Yahoo service
+    pass
+
+def send_yahoo_email(user, to_email, subject, body):
+    # Placeholder for sending Yahoo email
+    pass
+
+def get_zoho_service(user):
+    # Placeholder for Zoho service
+    pass
+
+def send_zoho_email(user, to_email, subject, body):
+    # Placeholder for sending Zoho email
     pass
 
 import smtplib

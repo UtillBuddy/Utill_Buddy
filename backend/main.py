@@ -2,8 +2,8 @@ import os
 from fastapi import FastAPI, Depends, HTTPException, File, UploadFile
 from pydantic import BaseModel
 from backend.auth import create_access_token, verify_firebase_token, get_password_hash, verify_password, get_current_user
-from backend.database import get_user, create_user, get_distinct_regions, get_recipients_by_region, save_template, update_existing_template, get_template, get_email_counts_for_user, save_email_config, update_user_cv_link, update_user_plan, save_outlook_tokens, save_smtp_config, get_plans
-from backend.models import EmailTemplate, User, Token, EmailConfig, SmtpConfig
+from backend.database import get_user, create_user, get_distinct_regions, get_recipients_by_region, save_template, update_existing_template, get_template, get_email_counts_for_user, save_email_config, update_user_cv_link, update_user_plan, save_outlook_tokens, save_smtp_config, get_plans, save_yahoo_config, save_zoho_config
+from backend.models import EmailTemplate, User, Token, EmailConfig, SmtpConfig, YahooConfig, ZohoConfig
 from backend.tasks import send_emails_task
 from firebase_admin import storage, credentials, initialize_app
 from backend.outlook import router as outlook_router
@@ -193,6 +193,20 @@ def create_app():
         first_name = "John"
         html_body = template["body"].format(first_name=first_name, cv_link=template["cv_link"], user_name=user["email"], user_mobile="", user_secondary_mobile="", user_linkedin="")
         return html_body
+
+
+    @app.post("/verify-yahoo-creds")
+    async def verify_yahoo_creds(config: YahooConfig, current_user: str = Depends(get_current_user)):
+        # This is a placeholder. In a real application, you would verify the credentials.
+        save_yahoo_config(current_user, config)
+        return {"message": "Yahoo credentials verified and saved"}
+
+
+    @app.post("/verify-zoho-creds")
+    async def verify_zoho_creds(config: ZohoConfig, current_user: str = Depends(get_current_user)):
+        # This is a placeholder. In a real application, you would verify the credentials.
+        save_zoho_config(current_user, config)
+        return {"message": "Zoho credentials verified and saved"}
 
 
     return app

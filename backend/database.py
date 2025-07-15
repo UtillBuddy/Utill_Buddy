@@ -110,3 +110,28 @@ def save_smtp_config(user_id: str, config):
 
 def get_plans():
     return list(plans_collection.find({}))
+
+
+def save_yahoo_config(user_id: str, config):
+    users_collection.update_one(
+        {"email": user_id},
+        {"$set": {
+            "email_config.provider": "yahoo",
+            "email_config.credentials": {
+                "app_password": encrypt(config.app_password)
+            }
+        }}
+    )
+
+
+def save_zoho_config(user_id: str, config):
+    users_collection.update_one(
+        {"email": user_id},
+        {"$set": {
+            "email_config.provider": "zoho",
+            "email_config.credentials": {
+                "client_id": encrypt(config.client_id),
+                "client_secret": encrypt(config.client_secret)
+            }
+        }}
+    )

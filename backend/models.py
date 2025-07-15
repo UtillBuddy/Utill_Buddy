@@ -55,3 +55,12 @@ class SmtpConfig(BaseModel):
     port: int
     username: str
     password: str
+
+
+class YahooConfig(BaseModel):
+    app_password: str
+
+
+class ZohoConfig(BaseModel):
+    client_id: str
+    client_secret: str
