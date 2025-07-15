@@ -44,3 +44,14 @@ class EmailTemplate(BaseModel):
     body: str
     cv_link: str
     created_at: str
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+
+class SmtpConfig(BaseModel):
+    server: str
+    port: int
+    username: str
+    password: str

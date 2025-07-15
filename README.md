@@ -1,97 +1,63 @@
-# 🧰 Utill Buddy
+# SaaS Job Application Email Sender
 
-**Utill Buddy** is a lightweight cross-platform desktop utility tool designed to improve your productivity by offering features like:
+This is a SaaS platform where job seekers can automate email job applications using their own personal email (Gmail, Outlook, Yahoo, Zoho, etc.), manage email templates, upload or link to a CV, and send to region-specific email lists — all while respecting per-provider sending limits.
 
-- ✍️ Clipboard text and image copy/paste
-- ✂️ Quick cut with shortcut keys
-- 🖱️ Background mouse jiggler to prevent system sleep
-- 🎯 Customizable keyboard shortcuts
-- 🖼️ Image clipboard handling
-- 🪟 System tray app with native look and feel
+## Backend
 
----
+The backend is built with FastAPI and MongoDB.
 
-## 🚀 Features
+### Running the backend with Docker
 
-- System tray integration (Windows, macOS, Linux)
-- Portable – no installation required
-- PyQt5 GUI with PyStray and PyAutoGUI support
-- Runs silently in the background
-- Build automation using GitHub Actions
+1.  **Build the Docker image:**
 
----
+    ```bash
+    docker build -t email-sender-backend .
+    ```
 
-## 📥 Downloads
+2.  **Run the Docker container:**
 
-<!-- BUILDS START -->
-<<<<<<< Updated upstream
-🔹 [Download for macOS](portable/macOS/UtillBuddy.app)
-=======
-🔹 [Download for Linux](portable/Linux/UtillBuddy)
->>>>>>> Stashed changes
-<!-- BUILDS END -->
+    ```bash
+    docker run -d -p 80:80 --env-file backend/.env email-sender-backend
+    ```
 
----
+    Make sure to create a `.env` file in the `backend` directory with the following environment variables:
 
-## 🛠️ How to Build Locally
+    ```
+    MONGODB_URI="your_mongodb_uri"
+    FIREBASE_CREDENTIALS_PATH="path/to/your/firebase/credentials.json"
+    SECRET_KEY="your_secret_key"
+    UI_PASSWORD="your_ui_password"
+    CREDENTIALS_BASE64="your_credentials_base64"
+    TOKEN_BASE64="your_token_base64"
+    ENCRYPTION_KEY="your_encryption_key"
+    OUTLOOK_CLIENT_ID="your_outlook_client_id"
+    OUTLOOK_CLIENT_SECRET="your_outlook_client_secret"
+    STRIPE_API_KEY="your_stripe_api_key"
+    STRIPE_WEBHOOK_SECRET="your_stripe_webhook_secret"
+    ```
 
-### Prerequisites
-- Python 3.x installed on your system.
-- Pip (Python package installer), usually included with Python.
+    To generate an encryption key, you can use the following Python code:
 
-### Steps
-It's highly recommended to use a Python virtual environment to manage dependencies and avoid conflicts with other projects or your global Python installation.
+    ```python
+    from cryptography.fernet import Fernet
+    key = Fernet.generate_key()
+    print(key.decode())
+    ```
 
-```bash
-# 1. Create and activate a virtual environment (optional but recommended)
-# On macOS and Linux:
-python3 -m venv venv
-source venv/bin/activate
-# On Windows:
-python -m venv venv
-.\venv\Scripts\activate
+## Frontend
 
-# 2. Install dependencies
-pip install -r requirements.txt
+The frontend is built with Next.js and Tailwind CSS.
 
-# 3. Install PyInstaller (if not already included or for a specific version)
-pip install pyinstaller
+### Running the frontend with Docker
 
-# 4. Run PyInstaller to build the executable
-#    The output will be in a 'dist' folder.
-pyinstaller --name UtillBuddy --onefile utill_buddy.py
-```
+1.  **Build the Docker image:**
 
----
+    ```bash
+    docker build -t email-sender-frontend ./frontend
+    ```
 
-## 🚀 Usage
+2.  **Run the Docker container:**
 
-After successfully building the application:
-
-1.  Navigate to the `dist` folder created by PyInstaller (usually located in the project's root directory).
-2.  Run the `UtillBuddy` executable:
-    *   On **Linux**: `./UtillBuddy`
-    *   On **Windows**: `UtillBuddy.exe`
-    *   On **macOS**: Open `UtillBuddy.app` (Note: macOS builds typically require signing for distribution if built on macOS).
-
-Utill Buddy will start, and an icon will appear in the system tray. Right-click the tray icon to access its features like mouse jiggling, clipboard utilities, and to customize shortcuts or exit the application.
-
----
-
-## 📜 License
-
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome! If you'd like to improve Utill Buddy or add new features:
-
-1.  Fork the repository on GitHub.
-2.  Create a new branch for your feature or bug fix.
-3.  Make your changes and commit them with clear messages.
-4.  Push your branch to your fork.
-5.  Submit a pull request to the main Utill Buddy repository.
-
-Alternatively, you can open an issue on GitHub to report bugs or suggest features.
+    ```bash
+    docker run -d -p 3000:3000 email-sender-frontend
+    ```

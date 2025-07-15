@@ -1,0 +1,14 @@
+Dockerfile
+.dockerignore
+.git
+.gitignore
+__pycache__
+backend/__pycache__
+backend/tests
+backend/venv
+.env
+credentials.json
+token.json
+*.pyc
+*.pyo
+*.pyd
