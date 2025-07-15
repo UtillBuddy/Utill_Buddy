@@ -8,3 +8,6 @@ google-auth-oauthlib
 firebase-admin
 passlib[bcrypt]
 python-jose[cryptography]
+python-multipart
+pytest
+requests

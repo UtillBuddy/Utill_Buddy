@@ -9,10 +9,6 @@ from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 
-# Firebase Admin SDK setup
-cred = credentials.Certificate(os.getenv("FIREBASE_CREDENTIALS_PATH"))
-firebase_admin.initialize_app(cred)
-
 # JWT settings
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
