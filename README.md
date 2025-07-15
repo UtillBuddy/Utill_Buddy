@@ -30,3 +30,21 @@ The backend is built with FastAPI and MongoDB.
     CREDENTIALS_BASE64="your_credentials_base64"
     TOKEN_BASE64="your_token_base64"
     ```
+
+## Frontend
+
+The frontend is built with Next.js and Tailwind CSS.
+
+### Running the frontend with Docker
+
+1.  **Build the Docker image:**
+
+    ```bash
+    docker build -t email-sender-frontend ./frontend
+    ```
+
+2.  **Run the Docker container:**
+
+    ```bash
+    docker run -d -p 3000:3000 email-sender-frontend
+    ```
