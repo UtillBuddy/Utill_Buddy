@@ -51,9 +51,16 @@ def get_email_counts_for_user(user_id: str):
 
 
 def save_email_config(user_id: str, config):
+    encrypted_config = {
+        "provider": config.provider,
+        "credentials": {
+            "credentials_base64": encrypt(config.credentials["credentials_base64"]),
+            "token_base64": encrypt(config.credentials["token_base64"])
+        }
+    }
     users_collection.update_one(
         {"email": user_id},
-        {"$set": {"email_config": config.dict()}}
+        {"$set": {"email_config": encrypted_config}}
     )
 
 
@@ -68,4 +75,33 @@ def update_user_plan(user_id: str, plan: str):
     users_collection.update_one(
         {"email": user_id},
         {"$set": {"plan": plan}}
+    )
+
+
+def save_outlook_tokens(user_id: str, access_token: str, refresh_token: str):
+    users_collection.update_one(
+        {"email": user_id},
+        {"$set": {
+            "email_config.provider": "outlook",
+            "email_config.credentials.access_token": encrypt(access_token),
+            "email_config.credentials.refresh_token": encrypt(refresh_token)
+        }}
+    )
+
+
+from backend.encryption import encrypt
+
+def save_smtp_config(user_id: str, config):
+    encrypted_config = {
+        "server": config.server,
+        "port": config.port,
+        "username": config.username,
+        "password": encrypt(config.password)
+    }
+    users_collection.update_one(
+        {"email": user_id},
+        {"$set": {
+            "email_config.provider": "smtp",
+            "email_config.credentials": encrypted_config
+        }}
     )

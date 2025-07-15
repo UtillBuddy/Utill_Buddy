@@ -48,3 +48,10 @@ class EmailTemplate(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str
+
+
+class SmtpConfig(BaseModel):
+    server: str
+    port: int
+    username: str
+    password: str

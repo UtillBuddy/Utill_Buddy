@@ -40,6 +40,10 @@ export default function EmailConfig() {
         onChange={(e) => setCredentials(e.targe.value)}
       />
       <button onClick={handleSaveConfig}>Save Configuration</button>
+      <hr />
+      <button onClick={() => window.location.href = "/outlook/login"}>
+        Connect with Outlook
+      </button>
     </div>
   );
 }

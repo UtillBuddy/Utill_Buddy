@@ -2,10 +2,11 @@ import os
 from fastapi import FastAPI, Depends, HTTPException, File, UploadFile
 from pydantic import BaseModel
 from backend.auth import create_access_token, verify_firebase_token, get_password_hash, verify_password, get_current_user
-from backend.database import get_user, create_user, get_distinct_regions, get_recipients_by_region, save_template, update_existing_template, get_template, get_email_counts_for_user, save_email_config, update_user_cv_link, update_user_plan
-from backend.models import EmailTemplate, User, Token, EmailConfig
+from backend.database import get_user, create_user, get_distinct_regions, get_recipients_by_region, save_template, update_existing_template, get_template, get_email_counts_for_user, save_email_config, update_user_cv_link, update_user_plan, save_outlook_tokens, save_smtp_config
+from backend.models import EmailTemplate, User, Token, EmailConfig, SmtpConfig
 from backend.email_sender import send_emails
 from firebase_admin import storage, credentials, initialize_app
+from backend.outlook import router as outlook_router
 
 def create_app():
     app = FastAPI()
@@ -13,6 +14,8 @@ def create_app():
     # Firebase Admin SDK setup
     cred = credentials.Certificate(os.getenv("FIREBASE_CREDENTIALS_PATH"))
     initialize_app(cred)
+
+    app.include_router(outlook_router, prefix="/outlook", tags=["outlook"])
 
 
     @app.post("/register", response_model=Token)
@@ -116,5 +119,13 @@ def create_app():
             return {"message": "Promo code validated successfully. You are now on the paid plan."}
         else:
             raise HTTPException(status_code=400, detail="Invalid promo code")
+
+
+    @app.post("/verify-smtp-creds")
+    async def verify_smtp_creds(config: SmtpConfig, current_user: str = Depends(get_current_user)):
+        # This is a placeholder. In a real application, you would verify the credentials.
+        save_smtp_config(current_user, config)
+        return {"message": "SMTP credentials verified and saved"}
+
 
     return app

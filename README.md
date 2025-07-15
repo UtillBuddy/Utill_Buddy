@@ -29,6 +29,17 @@ The backend is built with FastAPI and MongoDB.
     UI_PASSWORD="your_ui_password"
     CREDENTIALS_BASE64="your_credentials_base64"
     TOKEN_BASE64="your_token_base64"
+    ENCRYPTION_KEY="your_encryption_key"
+    OUTLOOK_CLIENT_ID="your_outlook_client_id"
+    OUTLOOK_CLIENT_SECRET="your_outlook_client_secret"
+    ```
+
+    To generate an encryption key, you can use the following Python code:
+
+    ```python
+    from cryptography.fernet import Fernet
+    key = Fernet.generate_key()
+    print(key.decode())
     ```
 
 ## Frontend
