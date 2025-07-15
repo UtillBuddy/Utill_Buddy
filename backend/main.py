@@ -12,11 +12,30 @@ import stripe
 from fastapi_csrf_protect import CsrfProtect
 from fastapi_csrf_protect.exceptions import CsrfProtectError
 from starlette.responses import JSONResponse
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 from backend.socketio_app import app as socketio_app
 
+limiter = Limiter(key_func=get_remote_address)
+
+from starlette.middleware.base import BaseHTTPMiddleware
+
 def create_app():
     app = FastAPI()
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+    class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+        async def dispatch(self, request, call_next):
+            response = await call_next(request)
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+            response.headers["X-Content-Type-Options"] = "nosniff"
+            response.headers["X-Frame-Options"] = "DENY"
+            return response
+
+    app.add_middleware(SecurityHeadersMiddleware)
 
     # Firebase Admin SDK setup
     cred = credentials.Certificate(os.getenv("FIREBASE_CREDENTIALS_PATH"))
@@ -40,7 +59,8 @@ def create_app():
 
 
     @app.post("/register", response_model=Token)
-    async def register(user: User, csrf_protect: CsrfProtect = Depends()):
+    @limiter.limit("5/minute")
+    async def register(user: User, request: Request, csrf_protect: CsrfProtect = Depends()):
         db_user = get_user(user.email)
         if db_user:
             raise HTTPException(status_code=400, detail="Email already registered")
@@ -52,7 +72,8 @@ def create_app():
         return {"access_token": access_token, "token_type": "bearer"}
 
     @app.post("/login", response_model=Token)
-    async def login(user: User, csrf_protect: CsrfProtect = Depends()):
+    @limiter.limit("5/minute")
+    async def login(user: User, request: Request, csrf_protect: CsrfProtect = Depends()):
         db_user = get_user(user.email)
         if not db_user or not verify_password(user.password, db_user["hashed_password"]):
             raise HTTPException(status_code=401, detail="Incorrect email or password")
@@ -87,15 +108,16 @@ def create_app():
 
     @app.post("/setup-template")
     async def setup_template(template: EmailTemplate, current_user: str = Depends(get_current_user)):
-        template.user_id = current_user
-        save_template(template)
+        template_data = template.dict()
+        template_data["user_id"] = current_user
+        save_template(template_data)
         return {"message": "Template saved successfully"}
 
 
     @app.put("/update-template")
     async def update_template(template: EmailTemplate, current_user: str = Depends(get_current_user)):
-        template.user_id = current_user
-        update_existing_template(template)
+        template_data = template.dict()
+        update_existing_template(current_user, template_data)
         return {"message": "Template updated successfully"}
 
 

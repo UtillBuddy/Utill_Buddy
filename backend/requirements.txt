@@ -16,3 +16,5 @@ stripe
 celery
 redis
 fastapi-csrf-protect
+bleach
+slowapi

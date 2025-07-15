@@ -4,6 +4,7 @@ from backend.socketio_app import sio
 import time
 import random
 from googleapiclient.errors import HttpError
+import bleach
 
 @celery_app.task
 def send_emails_task(user, template, recipients):
@@ -17,7 +18,11 @@ def send_emails_task(user, template, recipients):
         recipient_email = recipient['email'].strip()
         first_name = recipient_email.split('@')[0].capitalize()
         subject = template["subject"].format(first_name=first_name)
-        html_body = template["body"].format(first_name=first_name, cv_link=template["cv_link"], user_name=user["email"], user_mobile="", user_secondary_mobile="", user_linkedin="")
+        html_body = bleach.clean(
+            template["body"].format(first_name=first_name, cv_link=template["cv_link"], user_name=user["email"], user_mobile="", user_secondary_mobile="", user_linkedin=""),
+            tags=bleach.sanitizer.ALLOWED_TAGS + ["p", "a", "img", "strong", "em", "u", "h1", "h2", "h3", "h4", "h5", "h6", "ul", "ol", "li", "br"],
+            attributes={**bleach.sanitizer.ALLOWED_ATTRIBUTES, "a": ["href", "title"], "img": ["src", "alt"]},
+        )
 
         try:
             if provider == "smtp":
